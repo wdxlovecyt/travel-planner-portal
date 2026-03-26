@@ -183,32 +183,27 @@ const Map = ({ selectedRoute, onBack }) => {
     const startPoint = currentRoute.segments[0].from_place_name;
     const endPoint = currentRoute.segments[currentRoute.segments.length - 1].to_place_name;
     
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      // 提取中间的所有途经点
-      let viaPoints = [];
-      if (currentRoute.segments.length > 1) {
-        viaPoints = currentRoute.segments.slice(1).map(seg => seg.from_place_name);
-      }
-      
-      let webUri = `https://uri.amap.com/navigation?from=&to=${encodeURIComponent(endPoint)}&mode=walk&policy=1&src=travelplan&coordinate=gaode&callnative=1`;
-      
-      // 如果有途经点，拼接到 uri 中
-      if (viaPoints.length > 0) {
-        const viaString = viaPoints.join(';');
-        webUri += `&via=${encodeURIComponent(viaString)}`;
-      }
-      
-      window.open(webUri, '_blank');
-    } else {
-      // PC端：提取所有途经点并在 URL 中拼接
-      let pcUri = `https://www.amap.com/dir?from[name]=${encodeURIComponent(startPoint)}&to[name]=${encodeURIComponent(endPoint)}&type=walk`;
-      
-      // 添加途经点 (由于PC版不支持通过URL带多个via参数，我们仅作为备选展示)
-      // 如果实在需要可以考虑换成支持 via 的 API，不过通常 PC 端主要是看个大概，我们尽量把路线传过去
-      window.open(pcUri, '_blank');
+    // 提取中间的所有途经点
+    let viaPoints = [];
+    if (currentRoute.segments.length > 1) {
+      viaPoints = currentRoute.segments.slice(1).map(seg => seg.from_place_name);
     }
+    
+    // 统一使用高德官网的路线规划地址（自动适配PC和移动端H5，且能完美解析纯文本地名）
+    let navUrl = `https://www.amap.com/dir?from[name]=${encodeURIComponent(startPoint)}&to[name]=${encodeURIComponent(endPoint)}`;
+    
+    // 动态拼接所有途经点
+    if (viaPoints.length > 0) {
+      viaPoints.forEach((via, index) => {
+        navUrl += `&via[${index}][name]=${encodeURIComponent(via)}`;
+      });
+    }
+    
+    // 默认使用驾车模式（高德对多途经点的支持在驾车模式下最稳定）
+    navUrl += `&type=car`;
+    
+    // 直接跳转
+    window.open(navUrl, '_blank');
   };
 
   return (
