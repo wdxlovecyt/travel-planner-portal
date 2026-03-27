@@ -4,14 +4,13 @@ import { Spin, message, Card } from 'antd';
 import { EnvironmentOutlined, FlagOutlined, CarOutlined, LeftOutlined, SwapOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import './style.css';
 
-const MAX_AMAP_VIA_POINTS = 15;
-
 const Map = ({ selectedRoute, onBack }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const [loading, setLoading] = useState(true);
   const [currentRoute, setCurrentRoute] = useState(null);
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
+  const [activeNavSegmentIndex, setActiveNavSegmentIndex] = useState(0);
   const dragRef = useRef({ startY: 0 });
 
   useEffect(() => {
@@ -55,9 +54,9 @@ const Map = ({ selectedRoute, onBack }) => {
 
   useEffect(() => {
     if (selectedRoute && selectedRoute.segments && mapInstance.current) {
-      drawRouteSegments(selectedRoute.segments);
-      setCurrentRoute(selectedRoute);
+      drawRouteSegments(selectedRoute);
       setIsPanelExpanded(false);
+      setActiveNavSegmentIndex(0);
     } else if (!selectedRoute) {
       setCurrentRoute(null);
       if (mapInstance.current) {
@@ -66,13 +65,16 @@ const Map = ({ selectedRoute, onBack }) => {
     }
   }, [selectedRoute]);
 
-  const drawRouteSegments = async (segments) => {
+  const drawRouteSegments = async (route) => {
+    const { segments } = route;
     if (!segments || segments.length === 0) return;
 
     setLoading(true);
     mapInstance.current.clearMap();
     const allMarkers = [];
     const allPolylines = [];
+    const enrichedSegments = [];
+    const missingCoordinateSegments = [];
 
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
@@ -96,6 +98,15 @@ const Map = ({ selectedRoute, onBack }) => {
         if (data.segments && data.segments.length > 0) {
           const routePlan = data.segments[0].route_plan;
           if (routePlan) {
+            if (!routePlan.origin?.location || !routePlan.destination?.location) {
+              missingCoordinateSegments.push(segment);
+            }
+
+            enrichedSegments.push({
+              ...segment,
+              route_plan: routePlan
+            });
+
             const { origin, destination, steps } = routePlan;
 
             const originMarker = new window.AMap.Marker({
@@ -144,17 +155,43 @@ const Map = ({ selectedRoute, onBack }) => {
                 allPolylines.push(polyline);
               }
             }
+          } else {
+            missingCoordinateSegments.push(segment);
+            enrichedSegments.push(segment);
           }
+        } else {
+          missingCoordinateSegments.push(segment);
+          enrichedSegments.push(segment);
         }
       } catch (err) {
         console.error('获取路线数据失败:', err);
+        missingCoordinateSegments.push(segment);
+        enrichedSegments.push(segment);
       }
     }
 
     if (allMarkers.length > 0 || allPolylines.length > 0) {
       mapInstance.current.setFitView([...allMarkers, ...allPolylines]);
     }
-    
+
+    setCurrentRoute({
+      ...route,
+      segments: enrichedSegments
+    });
+
+    if (missingCoordinateSegments.length > 0) {
+      const firstInvalidSegment = missingCoordinateSegments[0];
+      const hasMultipleInvalidSegments = missingCoordinateSegments.length > 1;
+      const invalidSegmentText = `${firstInvalidSegment.from_place_name} -> ${firstInvalidSegment.to_place_name}`;
+
+      message.error(
+        hasMultipleInvalidSegments
+          ? `后端返回的部分地点缺少坐标，无法导航。首个异常路段：${invalidSegmentText}`
+          : `后端返回的地点缺少坐标，无法导航。异常路段：${invalidSegmentText}`,
+        4
+      );
+    }
+
     setLoading(false);
   };
 
@@ -179,48 +216,38 @@ const Map = ({ selectedRoute, onBack }) => {
     dragRef.current.startY = 0;
   };
 
-  const handleStartNav = () => {
-    if (!currentRoute || !currentRoute.segments || currentRoute.segments.length === 0) return;
+  const buildAmapNavUrl = (segment) => {
+    const routePlan = segment.route_plan;
+    const originName = routePlan?.origin?.name || segment.from_place_name;
+    const destinationName = routePlan?.destination?.name || segment.to_place_name;
+    const originLocation = routePlan?.origin?.location;
+    const destinationLocation = routePlan?.destination?.location;
 
-    const allStops = [
-      currentRoute.segments[0].from_place_name,
-      ...currentRoute.segments.map((segment) => segment.to_place_name)
-    ];
-
-    const navBatches = [];
-    let startIndex = 0;
-
-    while (startIndex < allStops.length - 1) {
-      const endIndex = Math.min(
-        startIndex + MAX_AMAP_VIA_POINTS + 1,
-        allStops.length - 1
-      );
-
-      navBatches.push(allStops.slice(startIndex, endIndex + 1));
-      startIndex = endIndex;
+    if (originLocation && destinationLocation) {
+      return `https://uri.amap.com/navigation?from=${encodeURIComponent(`${originLocation},${originName}`)}&to=${encodeURIComponent(`${destinationLocation},${destinationName}`)}&mode=car&policy=1&src=${encodeURIComponent('travel-plan-portal')}&coordinate=gaode&callnative=0`;
     }
 
-    const currentBatch = navBatches[0];
-    const [startPoint, ...restPoints] = currentBatch;
-    const endPoint = restPoints[restPoints.length - 1];
-    const viaPoints = restPoints.slice(0, -1);
+    return null;
+  };
 
-    let navUrl = `https://www.amap.com/dir?from[name]=${encodeURIComponent(startPoint)}&to[name]=${encodeURIComponent(endPoint)}`;
+  const handleStartNav = () => {
+    if (!currentRoute || !currentRoute.segments || currentRoute.segments.length === 0) return;
+    const segment = currentRoute.segments[activeNavSegmentIndex];
+    const navUrl = buildAmapNavUrl(segment);
 
-    viaPoints.forEach((via, index) => {
-      navUrl += `&via[${index}][name]=${encodeURIComponent(via)}`;
-    });
+    if (!navUrl) {
+      message.error('当前路段缺少高德坐标，已阻止跳转到模糊搜索页。请先确保该路段已成功生成路线。');
+      return;
+    }
 
-    navUrl += `&type=car`;
-
-    if (navBatches.length > 1) {
+    if (currentRoute.segments.length > 1) {
       message.info(
-        `该路线共 ${allStops.length} 个点，已按高德限制拆成 ${navBatches.length} 段，当前打开第 1 段导航。`,
+        `高德暂不稳定支持整条多途经点直达，当前打开第 ${activeNavSegmentIndex + 1} / ${currentRoute.segments.length} 段导航。`,
         4
       );
     }
 
-    window.open(navUrl, '_blank');
+    window.location.href = navUrl;
   };
 
   return (
@@ -291,8 +318,34 @@ const Map = ({ selectedRoute, onBack }) => {
             </div>
 
             <div className="route-bottom-actions">
+              {currentRoute.segments.length > 1 && (
+                <div className="nav-segment-switcher">
+                  <button
+                    type="button"
+                    className="segment-switch-btn"
+                    onClick={() => setActiveNavSegmentIndex((prev) => Math.max(prev - 1, 0))}
+                    disabled={activeNavSegmentIndex === 0}
+                  >
+                    上一段
+                  </button>
+                  <div className="nav-segment-label">
+                    {`第 ${activeNavSegmentIndex + 1} 段`}
+                    <span className="nav-segment-route">
+                      {`${currentRoute.segments[activeNavSegmentIndex].from_place_name} -> ${currentRoute.segments[activeNavSegmentIndex].to_place_name}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="segment-switch-btn"
+                    onClick={() => setActiveNavSegmentIndex((prev) => Math.min(prev + 1, currentRoute.segments.length - 1))}
+                    disabled={activeNavSegmentIndex === currentRoute.segments.length - 1}
+                  >
+                    下一段
+                  </button>
+                </div>
+              )}
               <div className="nav-btn" onClick={handleStartNav}>
-                {currentRoute.segments.length > MAX_AMAP_VIA_POINTS + 1 ? '开始分段导航' : '开始导航'}
+                {currentRoute.segments.length > 1 ? '导航当前路段' : '开始导航'}
               </div>
             </div>
           </div>
