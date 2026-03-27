@@ -4,6 +4,8 @@ import { Spin, message, Card } from 'antd';
 import { EnvironmentOutlined, FlagOutlined, CarOutlined, LeftOutlined, SwapOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import './style.css';
 
+const MAX_AMAP_VIA_POINTS = 15;
+
 const Map = ({ selectedRoute, onBack }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -179,30 +181,45 @@ const Map = ({ selectedRoute, onBack }) => {
 
   const handleStartNav = () => {
     if (!currentRoute || !currentRoute.segments || currentRoute.segments.length === 0) return;
-    
-    const startPoint = currentRoute.segments[0].from_place_name;
-    const endPoint = currentRoute.segments[currentRoute.segments.length - 1].to_place_name;
-    
-    // 提取中间的所有途经点
-    let viaPoints = [];
-    if (currentRoute.segments.length > 1) {
-      viaPoints = currentRoute.segments.slice(1).map(seg => seg.from_place_name);
+
+    const allStops = [
+      currentRoute.segments[0].from_place_name,
+      ...currentRoute.segments.map((segment) => segment.to_place_name)
+    ];
+
+    const navBatches = [];
+    let startIndex = 0;
+
+    while (startIndex < allStops.length - 1) {
+      const endIndex = Math.min(
+        startIndex + MAX_AMAP_VIA_POINTS + 1,
+        allStops.length - 1
+      );
+
+      navBatches.push(allStops.slice(startIndex, endIndex + 1));
+      startIndex = endIndex;
     }
-    
-    // 统一使用高德官网的路线规划地址（自动适配PC和移动端H5，且能完美解析纯文本地名）
+
+    const currentBatch = navBatches[0];
+    const [startPoint, ...restPoints] = currentBatch;
+    const endPoint = restPoints[restPoints.length - 1];
+    const viaPoints = restPoints.slice(0, -1);
+
     let navUrl = `https://www.amap.com/dir?from[name]=${encodeURIComponent(startPoint)}&to[name]=${encodeURIComponent(endPoint)}`;
-    
-    // 动态拼接所有途经点
-    if (viaPoints.length > 0) {
-      viaPoints.forEach((via, index) => {
-        navUrl += `&via[${index}][name]=${encodeURIComponent(via)}`;
-      });
-    }
-    
-    // 默认使用驾车模式（高德对多途经点的支持在驾车模式下最稳定）
+
+    viaPoints.forEach((via, index) => {
+      navUrl += `&via[${index}][name]=${encodeURIComponent(via)}`;
+    });
+
     navUrl += `&type=car`;
-    
-    // 直接跳转
+
+    if (navBatches.length > 1) {
+      message.info(
+        `该路线共 ${allStops.length} 个点，已按高德限制拆成 ${navBatches.length} 段，当前打开第 1 段导航。`,
+        4
+      );
+    }
+
     window.open(navUrl, '_blank');
   };
 
@@ -274,7 +291,9 @@ const Map = ({ selectedRoute, onBack }) => {
             </div>
 
             <div className="route-bottom-actions">
-              <div className="nav-btn" onClick={handleStartNav}>开始导航</div>
+              <div className="nav-btn" onClick={handleStartNav}>
+                {currentRoute.segments.length > MAX_AMAP_VIA_POINTS + 1 ? '开始分段导航' : '开始导航'}
+              </div>
             </div>
           </div>
         </>
