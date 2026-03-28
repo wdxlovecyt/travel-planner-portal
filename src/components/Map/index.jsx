@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import AMapLoader from '@amap/amap-jsapi-loader';
-import { Spin, message, Card } from 'antd';
-import { EnvironmentOutlined, FlagOutlined, CarOutlined, LeftOutlined, SwapOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { Spin, message } from 'antd';
+import { CarOutlined, LeftOutlined } from '@ant-design/icons';
 import './style.css';
 
 const Map = ({ selectedRoute, onBack }) => {
@@ -10,7 +10,6 @@ const Map = ({ selectedRoute, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [currentRoute, setCurrentRoute] = useState(null);
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
-  const [activeNavSegmentIndex, setActiveNavSegmentIndex] = useState(0);
   const dragRef = useRef({ startY: 0 });
 
   useEffect(() => {
@@ -56,7 +55,6 @@ const Map = ({ selectedRoute, onBack }) => {
     if (selectedRoute && selectedRoute.segments && mapInstance.current) {
       drawRouteSegments(selectedRoute);
       setIsPanelExpanded(false);
-      setActiveNavSegmentIndex(0);
     } else if (!selectedRoute) {
       setCurrentRoute(null);
       if (mapInstance.current) {
@@ -230,9 +228,33 @@ const Map = ({ selectedRoute, onBack }) => {
     return null;
   };
 
-  const handleStartNav = () => {
-    if (!currentRoute || !currentRoute.segments || currentRoute.segments.length === 0) return;
-    const segment = currentRoute.segments[activeNavSegmentIndex];
+  const getWaypointStatus = (index) => {
+    if (!currentRoute?.segments?.length) return '';
+
+    if (index === 0) {
+      return currentRoute.segments[0].route_plan?.origin?.location ? '' : 'missing';
+    }
+
+    if (index === currentRoute.segments.length) {
+      const lastSegment = currentRoute.segments[currentRoute.segments.length - 1];
+      return lastSegment.route_plan?.destination?.location ? '' : 'missing';
+    }
+
+    const previousSegment = currentRoute.segments[index - 1];
+    const currentSegment = currentRoute.segments[index];
+    const hasDestination = !!previousSegment?.route_plan?.destination?.location;
+    const hasOrigin = !!currentSegment?.route_plan?.origin?.location;
+
+    return hasDestination && hasOrigin ? '' : 'missing';
+  };
+
+  const hasMissingCoordinates = (segments) => {
+    return segments.some(
+      (segment) => !segment.route_plan?.origin?.location || !segment.route_plan?.destination?.location
+    );
+  };
+
+  const handleSegmentNav = (segment) => {
     const navUrl = buildAmapNavUrl(segment);
 
     if (!navUrl) {
@@ -240,14 +262,29 @@ const Map = ({ selectedRoute, onBack }) => {
       return;
     }
 
-    if (currentRoute.segments.length > 1) {
-      message.info(
-        `高德暂不稳定支持整条多途经点直达，当前打开第 ${activeNavSegmentIndex + 1} / ${currentRoute.segments.length} 段导航。`,
-        4
-      );
+    window.open(navUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleStartNav = () => {
+    if (!currentRoute || !currentRoute.segments || currentRoute.segments.length === 0) return;
+
+    if (hasMissingCoordinates(currentRoute.segments)) {
+      message.error('当前路线存在缺少坐标的地点，已阻止跳转到高德。');
+      return;
     }
 
-    window.location.href = navUrl;
+    const startPoint = currentRoute.segments[0].from_place_name;
+    const endPoint = currentRoute.segments[currentRoute.segments.length - 1].to_place_name;
+    const viaPoints = currentRoute.segments.slice(1).map((segment) => segment.from_place_name);
+
+    let navUrl = `https://www.amap.com/dir?from[name]=${encodeURIComponent(startPoint)}&to[name]=${encodeURIComponent(endPoint)}`;
+
+    viaPoints.forEach((via, index) => {
+      navUrl += `&via[${index}][name]=${encodeURIComponent(via)}`;
+    });
+
+    navUrl += '&type=car';
+    window.open(navUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -297,55 +334,54 @@ const Map = ({ selectedRoute, onBack }) => {
 
             <div className="waypoints-list">
               {currentRoute.segments.map((seg, idx) => (
-                <div key={idx} className="waypoint-item">
-                  <div className="waypoint-marker">
-                    <div className={`waypoint-dot ${idx === 0 ? 'start-dot' : 'mid-dot'}`}></div>
-                    <div className="waypoint-line"></div>
+                <React.Fragment key={idx}>
+                  <div className="waypoint-item">
+                    <div className="waypoint-marker">
+                      <div className={`waypoint-dot ${idx === 0 ? 'start-dot' : 'mid-dot'} ${getWaypointStatus(idx)}`}></div>
+                      <div className="waypoint-line"></div>
+                    </div>
+                    <div className="waypoint-content">
+                      <div className={`waypoint-name ${getWaypointStatus(idx)}`}>{seg.from_place_name}</div>
+                    </div>
                   </div>
-                  <div className="waypoint-content">
-                    <div className="waypoint-name">{seg.from_place_name}</div>
+
+                  <div className="segment-nav-row">
+                    <div className="segment-nav-rail">
+                      <div className="segment-nav-rail-line"></div>
+                      <button
+                        type="button"
+                        className="segment-nav-icon-btn"
+                        onClick={() => handleSegmentNav(seg)}
+                      >
+                        <CarOutlined />
+                      </button>
+                      <div className="segment-nav-rail-line"></div>
+                    </div>
+                    <button
+                      type="button"
+                      className="segment-nav-link"
+                      onClick={() => handleSegmentNav(seg)}
+                    >
+                      {`导航 ${seg.from_place_name} -> ${seg.to_place_name}`}
+                    </button>
                   </div>
-                </div>
+                </React.Fragment>
               ))}
               <div className="waypoint-item">
                 <div className="waypoint-marker">
-                  <div className="waypoint-dot end-dot"></div>
+                  <div className={`waypoint-dot end-dot ${getWaypointStatus(currentRoute.segments.length)}`}></div>
                 </div>
                 <div className="waypoint-content">
-                  <div className="waypoint-name">{currentRoute.segments[currentRoute.segments.length - 1].to_place_name}</div>
+                  <div className={`waypoint-name ${getWaypointStatus(currentRoute.segments.length)}`}>
+                    {currentRoute.segments[currentRoute.segments.length - 1].to_place_name}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="route-bottom-actions">
-              {currentRoute.segments.length > 1 && (
-                <div className="nav-segment-switcher">
-                  <button
-                    type="button"
-                    className="segment-switch-btn"
-                    onClick={() => setActiveNavSegmentIndex((prev) => Math.max(prev - 1, 0))}
-                    disabled={activeNavSegmentIndex === 0}
-                  >
-                    上一段
-                  </button>
-                  <div className="nav-segment-label">
-                    {`第 ${activeNavSegmentIndex + 1} 段`}
-                    <span className="nav-segment-route">
-                      {`${currentRoute.segments[activeNavSegmentIndex].from_place_name} -> ${currentRoute.segments[activeNavSegmentIndex].to_place_name}`}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="segment-switch-btn"
-                    onClick={() => setActiveNavSegmentIndex((prev) => Math.min(prev + 1, currentRoute.segments.length - 1))}
-                    disabled={activeNavSegmentIndex === currentRoute.segments.length - 1}
-                  >
-                    下一段
-                  </button>
-                </div>
-              )}
               <div className="nav-btn" onClick={handleStartNav}>
-                {currentRoute.segments.length > 1 ? '导航当前路段' : '开始导航'}
+                开始导航
               </div>
             </div>
           </div>

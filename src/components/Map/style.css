@@ -193,7 +193,7 @@
 
 .waypoint-item {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
 }
 
 .waypoint-marker {
@@ -202,6 +202,7 @@
   align-items: center;
   width: 20px;
   margin-right: 12px;
+  padding-top: 5px;
 }
 
 .waypoint-dot {
@@ -217,6 +218,10 @@
 .waypoint-dot.start-dot { border-color: #52c41a; }
 .waypoint-dot.end-dot { border-color: #ff4d4f; }
 .waypoint-dot.mid-dot { border-color: #1890ff; border-width: 2px; }
+.waypoint-dot.missing {
+  border-color: #ff4d4f;
+  background: #fff2f0;
+}
 
 .waypoint-line {
   flex: 1;
@@ -228,17 +233,90 @@
 
 .waypoint-content {
   flex: 1;
+  min-height: 28px;
   padding-bottom: 24px;
   font-size: 15px;
   color: #262626;
   border-bottom: 1px solid #f0f0f0;
   margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.waypoint-name {
+  line-height: 1.4;
+}
+
+.waypoint-name.missing {
+  color: #ff4d4f;
+  font-weight: 600;
 }
 
 .waypoint-item:last-child .waypoint-content {
   border-bottom: none;
   padding-bottom: 0;
   margin-bottom: 0;
+}
+
+.segment-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: -8px 0 10px;
+}
+
+.segment-nav-rail {
+  width: 20px;
+  margin-right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.segment-nav-rail-line {
+  width: 2px;
+  flex: 1;
+  min-height: 8px;
+  background: #f0f0f0;
+}
+
+.segment-nav-icon-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #e6f4ff;
+  color: #1677ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+}
+
+.segment-nav-link {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: #f8fbff;
+  color: #1677ff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.segment-nav-icon-btn .anticon,
+.segment-nav-link {
+  line-height: 1;
 }
 
 .route-bottom-actions {
@@ -249,52 +327,6 @@
   align-items: center;
   flex-direction: column;
   gap: 12px;
-}
-
-.nav-segment-switcher {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.segment-switch-btn {
-  border: none;
-  background: #f5f5f5;
-  color: #262626;
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.segment-switch-btn:disabled {
-  color: #bfbfbf;
-  cursor: not-allowed;
-}
-
-.nav-segment-label {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #262626;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.nav-segment-route {
-  width: 100%;
-  margin-top: 4px;
-  color: #8c8c8c;
-  font-size: 12px;
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
 }
 
 .nav-btn {
@@ -337,12 +369,12 @@
     padding: 10px 0;
   }
 
-  .nav-segment-switcher {
+  .segment-nav-row {
     gap: 8px;
   }
 
-  .segment-switch-btn {
-    padding: 8px 10px;
+  .segment-nav-link {
+    padding: 9px 10px;
     font-size: 12px;
   }
 }
