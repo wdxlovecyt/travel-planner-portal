@@ -1,57 +1,76 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import Chat from './components/Chat'
-import Map from './components/Map'
+import GuideExplorer from './components/GuideExplorer'
+import HomeMapScene from './components/HomeMapScene'
+import NavigationMapScene from './components/NavigationMapScene'
+import ProfilePage from './components/ProfilePage'
 import TabBar from './components/TabBar'
+import { routeStore, useRouteStore } from './stores/routeStore'
 import './App.css'
 
 function App() {
-  const [selectedRoute, setSelectedRoute] = useState(null)
-  const [activeTab, setActiveTab] = useState('home')
   const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const selectedRoute = useRouteStore((snapshot) => snapshot.selectedRoute)
+  const pathname = location.pathname
+  const isNavigationPage = pathname === '/navigation'
+  const isNavigating = useMemo(
+    () => isNavigationPage && Boolean(selectedRoute),
+    [isNavigationPage, selectedRoute]
+  )
+
+  useEffect(() => {
+    if (pathname === '/explore' || pathname === '/profile') {
+      routeStore.clearRoute()
+      setIsSearchFocused(false)
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    if (pathname === '/navigation' && !selectedRoute) {
+      navigate('/', { replace: true })
+    }
+  }, [pathname, selectedRoute, navigate])
 
   const handleRouteSelect = (route) => {
-    setSelectedRoute(route)
+    routeStore.setSelectedRoute(route)
+    setIsSearchFocused(false)
+    navigate('/navigation')
   }
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab)
-  }
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'home':
-        return (
-          <>
-            <Chat onRouteSelect={handleRouteSelect} onFocusChange={setIsSearchFocused} isNavigating={!!selectedRoute} />
-            <Map selectedRoute={selectedRoute} onBack={() => setSelectedRoute(null)} />
-          </>
-        )
-      case 'explore':
-        return (
-          <div className="page-placeholder">
-            <h2>探索页面</h2>
-            <p>正在开发中...</p>
-          </div>
-        )
-      case 'profile':
-        return (
-          <div className="page-placeholder">
-            <h2>我的页面</h2>
-            <p>正在开发中...</p>
-          </div>
-        )
-      default:
-        return null
-    }
+  const handleBackFromNavigation = () => {
+    routeStore.clearRoute()
+    navigate('/')
   }
 
   return (
-    <div className={`app-container ${selectedRoute ? 'navigating' : ''}`}>
+    <div className={`app-container ${isNavigating ? 'navigating' : ''}`}>
       <div className="page-content">
-        {renderContent()}
+        <Routes>
+          <Route
+            path="/"
+            element={(
+              <>
+                <HomeMapScene />
+                {!isNavigating && (
+                  <Chat onRouteSelect={handleRouteSelect} onFocusChange={setIsSearchFocused} />
+                )}
+              </>
+            )}
+          />
+          <Route
+            path="/navigation"
+            element={<NavigationMapScene onBack={handleBackFromNavigation} />}
+          />
+          <Route path="/explore" element={<GuideExplorer />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
-      {!isSearchFocused && !selectedRoute && (
-        <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
+      {!isSearchFocused && !isNavigating && (
+        <TabBar pathname={pathname} />
       )}
     </div>
   )

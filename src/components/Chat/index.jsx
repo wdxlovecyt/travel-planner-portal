@@ -3,10 +3,10 @@ import { Input, Button, message, List, Tag, Spin } from 'antd'
 import { SearchOutlined, EnvironmentOutlined, CloseOutlined } from '@ant-design/icons'
 import './style.css'
 
-function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
-  const [searchMessage, setSearchMessage] = useState('给我深圳旅游攻略并规划路线')
+function Chat({ onRouteSelect, onFocusChange }) {
+  const [searchMessage, setSearchMessage] = useState('给我一份城市旅游攻略并规划路线')
   const [routes, setRoutes] = useState(null)
-  const [selectedRoute, setSelectedRoute] = useState(null)
+  const [assistantReply, setAssistantReply] = useState('')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false)
@@ -20,6 +20,14 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
       onFocusChange(isSearchPanelOpen)
     }
   }, [isSearchPanelOpen, onFocusChange])
+
+  useEffect(() => {
+    return () => {
+      if (onFocusChange) {
+        onFocusChange(false)
+      }
+    }
+  }, [onFocusChange])
 
   const saveSearchHistory = (keyword) => {
     const trimmed = keyword.trim()
@@ -51,8 +59,8 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
 
     saveSearchHistory(searchMessage)
     setLoading(true)
-    setSelectedRoute(null)
     setRoutes(null)
+    setAssistantReply('')
     setStatus('')
     
     try {
@@ -104,6 +112,14 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
               const statusText = data.message || data.stage
               setStatus(statusText)
             }
+
+            if (data.reply) {
+              setAssistantReply(data.reply)
+            }
+
+            if (data.content) {
+              setAssistantReply((prevReply) => prevReply || data.content)
+            }
             
             if (data.result) {
               if (data.result.type === 'route_plan_batch' && data.result.routes) {
@@ -127,6 +143,12 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
             const data = JSON.parse(jsonStr)
             if (data.stage || data.message) {
               setStatus(data.message || data.stage)
+            }
+            if (data.reply) {
+              setAssistantReply(data.reply)
+            }
+            if (data.content) {
+              setAssistantReply((prevReply) => prevReply || data.content)
             }
             if (data.result && data.result.type === 'route_plan_batch' && data.result.routes) {
               setRoutes(data.result.routes)
@@ -156,7 +178,6 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
   }
 
   const handleRouteSelect = (route, index) => {
-    setSelectedRoute(route)
     setIsSearchPanelOpen(false)
     message.success(`已选择第 ${index + 1} 条路线`)
     if (onRouteSelect) {
@@ -166,9 +187,6 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
 
   const handleInputFocus = () => {
     setIsSearchPanelOpen(true)
-    if (routes && routes.length > 0) {
-      setSelectedRoute(null)
-    }
   }
 
   const handleCloseSearchPanel = () => {
@@ -176,28 +194,35 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
   }
 
   return (
-    <div style={{ display: isNavigating ? 'none' : 'block' }}>
+    <div className={`chat-layer ${isSearchPanelOpen ? 'search-active' : ''}`}>
       <div className="search-bar">
-        <Input
-          placeholder="输入您的需求，例如：给我深圳旅游攻略并规划路线"
-          value={searchMessage}
-          onChange={(e) => setSearchMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          onFocus={handleInputFocus}
-          prefix={<SearchOutlined style={{ color: '#8c8c8c', marginRight: '8px' }} />}
-          suffix={
-            <Button 
-              type="primary" 
-              onClick={handleSearch}
-              loading={loading}
-            >
-              {loading ? '搜索中' : '搜索'}
-            </Button>
-          }
-          size="large"
-        />
+        <div className="search-shell">
+          <Input
+            placeholder="输入您的需求，例如：给我一份周末出游攻略并规划路线"
+            value={searchMessage}
+            onChange={(e) => setSearchMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            onFocus={handleInputFocus}
+            prefix={<SearchOutlined style={{ color: '#8c8c8c', marginRight: '8px' }} />}
+            suffix={
+              <Button 
+                type="primary" 
+                onClick={handleSearch}
+                loading={loading}
+              >
+                {loading ? '搜索中' : '搜索'}
+              </Button>
+            }
+            size="large"
+          />
+          <div className="search-shell-copy">
+            <div className="search-shell-badge">城市路线灵感</div>
+            <div className="search-shell-title">一句话生成游玩路线</div>
+            <div className="search-shell-subtitle">输入你的偏好、天数或出发地，我们会直接整理路线并给出导航。</div>
+          </div>
+        </div>
       </div>
-      
+
       {/* 从底部弹出的搜索结果面板 */}
       <div className={`search-panel ${isSearchPanelOpen ? 'open' : ''}`}>
         <div className="search-panel-header">
@@ -246,6 +271,11 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
                 )}
               />
             </div>
+          ) : assistantReply ? (
+            <div className="assistant-reply-card">
+              <div className="assistant-reply-label">助手回复</div>
+              <div className="assistant-reply-text">{assistantReply}</div>
+            </div>
           ) : (
             !loading && (
               <div className="empty-state">
@@ -270,8 +300,8 @@ function Chat({ onRouteSelect, onFocusChange, isNavigating }) {
                 )}
                 <div className="empty-tip">
                   <p>您也可以尝试搜索：</p>
-                  <Tag color="blue" onClick={() => setSearchMessage('深圳一日游路线')} style={{ cursor: 'pointer', margin: '4px' }}>深圳一日游路线</Tag>
-                  <Tag color="blue" onClick={() => setSearchMessage('从南山到福田怎么走')} style={{ cursor: 'pointer', margin: '4px' }}>从南山到福田怎么走</Tag>
+                  <Tag color="blue" onClick={() => setSearchMessage('杭州周末一日游路线')} style={{ cursor: 'pointer', margin: '4px' }}>杭州周末一日游路线</Tag>
+                  <Tag color="blue" onClick={() => setSearchMessage('从西湖到灵隐寺怎么走')} style={{ cursor: 'pointer', margin: '4px' }}>从西湖到灵隐寺怎么走</Tag>
                 </div>
               </div>
             )

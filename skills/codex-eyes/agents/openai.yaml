@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Eyes"
+  short_description: "Capture pages and inspect UI visually for screenshot-based frontend debugging."
+  default_prompt: "Use $codex-eyes and the capture_page tool when the task asks to inspect a page visually, take a screenshot, check layout/style issues, or see what the UI actually looks like."
