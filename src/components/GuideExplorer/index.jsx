@@ -85,7 +85,7 @@ function GuideExplorer() {
     setRoutes(null)
 
     try {
-      const response = await fetch('/api/guide-text/stream', {
+      const response = await fetch('/api/guide/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

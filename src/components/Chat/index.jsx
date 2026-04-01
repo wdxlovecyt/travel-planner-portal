@@ -64,7 +64,7 @@ function Chat({ onRouteSelect, onFocusChange }) {
     setStatus('')
     
     try {
-      const response = await fetch('/api/chat/stream', {
+      const response = await fetch('/api/plan/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
