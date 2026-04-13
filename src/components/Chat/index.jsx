@@ -3,8 +3,29 @@ import { Input, Button, message, List, Tag, Spin } from 'antd'
 import { SearchOutlined, EnvironmentOutlined, CloseOutlined } from '@ant-design/icons'
 import './style.css'
 
+const normalizeGuideRoutes = (routes = []) => {
+  return routes.map((route) => {
+    const places = Array.isArray(route.places) ? route.places : []
+    const segments = Array.isArray(route.segments)
+      ? route.segments.map((segment, index) => ({
+          segment_id: segment.segment_id || `segment_${route.id ?? 'route'}_${index + 1}`,
+          from_place_name: segment.from,
+          to_place_name: segment.to,
+          mode: segment.transportType === '公交' ? 'transit' : segment.transportType,
+          guide: places[index]?.next_segment_advice || places[index]?.advice
+        }))
+      : []
+
+    return {
+      ...route,
+      places,
+      segments
+    }
+  })
+}
+
 function Chat({ onRouteSelect, onFocusChange }) {
-  const [searchMessage, setSearchMessage] = useState('给我一份城市旅游攻略并规划路线')
+  const [searchMessage, setSearchMessage] = useState('给我一份深圳旅游攻略并规划路线')
   const [routes, setRoutes] = useState(null)
   const [assistantReply, setAssistantReply] = useState('')
   const [loading, setLoading] = useState(false)
@@ -64,7 +85,7 @@ function Chat({ onRouteSelect, onFocusChange }) {
     setStatus('')
     
     try {
-      const response = await fetch('/api/plan/stream', {
+      const response = await fetch('/api/guides/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -122,13 +143,13 @@ function Chat({ onRouteSelect, onFocusChange }) {
             }
             
             if (data.result) {
-              if (data.result.type === 'route_plan_batch' && data.result.routes) {
-                setRoutes(data.result.routes)
+              if (Array.isArray(data.result.routes)) {
+                setRoutes(normalizeGuideRoutes(data.result.routes))
               }
             }
             
-            if (data.type === 'route_plan_batch' && data.routes) {
-              setRoutes(data.routes)
+            if (Array.isArray(data.routes)) {
+              setRoutes(normalizeGuideRoutes(data.routes))
             }
           } catch (e) {
             console.error('解析JSON失败:', e, jsonStr)
@@ -150,11 +171,11 @@ function Chat({ onRouteSelect, onFocusChange }) {
             if (data.content) {
               setAssistantReply((prevReply) => prevReply || data.content)
             }
-            if (data.result && data.result.type === 'route_plan_batch' && data.result.routes) {
-              setRoutes(data.result.routes)
+            if (data.result && Array.isArray(data.result.routes)) {
+              setRoutes(normalizeGuideRoutes(data.result.routes))
             }
-            if (data.type === 'route_plan_batch' && data.routes) {
-              setRoutes(data.routes)
+            if (Array.isArray(data.routes)) {
+              setRoutes(normalizeGuideRoutes(data.routes))
             }
           } catch (e) {
             console.error('解析最后的数据失败:', e)
@@ -255,13 +276,10 @@ function Chat({ onRouteSelect, onFocusChange }) {
                       title={`路线 ${index + 1}`}
                       description={
                         <div className="route-segments-flow">
-                          {route.segments && route.segments.map((seg, segIndex) => (
-                            <React.Fragment key={segIndex}>
-                              <div className="flow-place">{seg.from_place_name}</div>
-                              <div className="flow-arrow">→</div>
-                              {segIndex === route.segments.length - 1 && (
-                                <div className="flow-place">{seg.to_place_name}</div>
-                              )}
+                          {route.places && route.places.map((place, placeIndex) => (
+                            <React.Fragment key={placeIndex}>
+                              <div className="flow-place">{place.name}</div>
+                              {placeIndex < route.places.length - 1 && <div className="flow-arrow">→</div>}
                             </React.Fragment>
                           ))}
                         </div>

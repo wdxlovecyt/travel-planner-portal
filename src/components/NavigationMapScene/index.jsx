@@ -35,14 +35,14 @@ const mergeRouteSegments = (route, incomingSegments = []) => {
         ...segment,
         ...incomingSegment,
         segment_id: segmentId,
-        mode: incomingSegment.mode || segment.mode || 'walking'
+        mode: incomingSegment.mode || segment.mode || 'transit'
       }
     })
   }
 }
 
 const normalizeSegmentMode = (segment) => {
-  return segment.mode || 'walking'
+  return segment.mode || 'transit'
 }
 
 function NavigationMapScene({ onBack }) {
@@ -114,7 +114,7 @@ function NavigationMapScene({ onBack }) {
   }
 
   const requestRoutePlan = async (route, segments) => {
-    const response = await fetch('/api/route-plan', {
+    const response = await fetch('/api/routes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -131,7 +131,7 @@ function NavigationMapScene({ onBack }) {
     })
 
     if (!response.ok) {
-      throw new Error(`route-plan request failed: ${response.status}`)
+      throw new Error(`routes request failed: ${response.status}`)
     }
 
     const data = await response.json()
@@ -203,12 +203,10 @@ function NavigationMapScene({ onBack }) {
     const originLocation = routePlan?.origin?.location
     const destinationLocation = routePlan?.destination?.location
     const segmentMode = TRANSPORT_MODES.find((mode) => mode.key === normalizeSegmentMode(segment))?.amapMode || 'walk'
+    const fromValue = originLocation ? `${originLocation},${originName}` : originName
+    const toValue = destinationLocation ? `${destinationLocation},${destinationName}` : destinationName
 
-    if (originLocation && destinationLocation) {
-      return `https://uri.amap.com/navigation?from=${encodeURIComponent(`${originLocation},${originName}`)}&to=${encodeURIComponent(`${destinationLocation},${destinationName}`)}&mode=${encodeURIComponent(segmentMode)}&policy=1&src=${encodeURIComponent('travel-plan-portal')}&coordinate=gaode&callnative=1`
-    }
-
-    return null
+    return `https://uri.amap.com/navigation?from=${encodeURIComponent(fromValue)}&to=${encodeURIComponent(toValue)}&mode=${encodeURIComponent(segmentMode)}&policy=1&src=${encodeURIComponent('travel-plan-portal')}&coordinate=gaode&callnative=1`
   }
 
   const getWaypointStatus = (index) => {
@@ -233,12 +231,6 @@ function NavigationMapScene({ onBack }) {
 
   const handleSegmentNav = (segment) => {
     const navUrl = buildAmapNavUrl(segment)
-
-    if (!navUrl) {
-      message.error('当前路段缺少高德坐标，已阻止跳转到模糊搜索页。请先确保该路段已成功生成路线。')
-      return
-    }
-
     window.open(navUrl, '_blank', 'noopener,noreferrer')
   }
 
@@ -247,11 +239,6 @@ function NavigationMapScene({ onBack }) {
 
     const firstSegment = routeToDisplay.segments[0]
     const navUrl = buildAmapNavUrl(firstSegment)
-
-    if (!navUrl) {
-      message.error('当前首段缺少高德坐标，已阻止跳转到模糊搜索页。请先确保该路段已成功生成路线。')
-      return
-    }
 
     if (routeToDisplay.segments.length > 1) {
       message.info(`当前按分段导航处理，已打开第 1 / ${routeToDisplay.segments.length} 段。`, 4)

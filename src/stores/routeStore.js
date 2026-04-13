@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-const DEFAULT_SEGMENT_MODE = 'walking'
+const DEFAULT_SEGMENT_MODE = 'transit'
 
 const hasCompleteRoutePlan = (route) => {
   return Boolean(route?.segments?.length) && route.segments.every((segment) => segment.route_plan)

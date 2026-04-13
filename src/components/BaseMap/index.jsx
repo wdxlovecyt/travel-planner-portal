@@ -60,7 +60,7 @@ const getLegPolylineStyle = (legType, fallbackMode) => {
 }
 
 const normalizeSegmentMode = (segment) => {
-  return segment.mode || 'walking'
+  return segment.mode || 'transit'
 }
 
 const parsePolyline = (polyline) => {

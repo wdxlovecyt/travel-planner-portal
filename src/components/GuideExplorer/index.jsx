@@ -85,7 +85,7 @@ function GuideExplorer() {
     setRoutes(null)
 
     try {
-      const response = await fetch('/api/guide/stream', {
+      const response = await fetch('/api/guides-to-routes/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -97,7 +97,7 @@ function GuideExplorer() {
       })
 
       if (!response.ok || !response.body) {
-        throw new Error(`guide-text request failed: ${response.status}`)
+        throw new Error(`guides-to-routes request failed: ${response.status}`)
       }
 
       const reader = response.body.getReader()
