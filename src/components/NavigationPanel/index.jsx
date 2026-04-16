@@ -2,6 +2,17 @@ import React from 'react';
 import { CompassOutlined, LeftOutlined } from '@ant-design/icons';
 import './style.css';
 
+const TRANSPORT_TYPE_TO_MODE = {
+  步行: 'walking',
+  驾车: 'driving',
+  骑行: 'riding',
+  公交: 'transit',
+  walking: 'walking',
+  driving: 'driving',
+  riding: 'riding',
+  transit: 'transit'
+};
+
 const formatDistance = (distance) => {
   if (typeof distance !== 'number' || Number.isNaN(distance)) {
     return '';
@@ -67,11 +78,11 @@ function NavigationPanel({
           <div className="map-route-inputs">
             <div className="route-input-row">
               <span className="dot start-dot"></span>
-              <div className="route-input-box">{segments[0].from_place_name}</div>
+              <div className="route-input-box">{segments[0].from}</div>
             </div>
             <div className="route-input-row">
               <span className="dot end-dot"></span>
-              <div className="route-input-box">{lastSegment.to_place_name}</div>
+              <div className="route-input-box">{lastSegment.to}</div>
             </div>
           </div>
         </div>
@@ -111,7 +122,7 @@ function NavigationPanel({
                   <div className="waypoint-line"></div>
                 </div>
                 <div className="waypoint-content">
-                  <div className={`waypoint-name ${getWaypointStatus(index)}`}>{segment.from_place_name}</div>
+                  <div className={`waypoint-name ${getWaypointStatus(index)}`}>{segment.from}</div>
                 </div>
               </div>
 
@@ -125,7 +136,7 @@ function NavigationPanel({
                       <button
                         key={`${segment.segment_id}-${mode.key}`}
                         type="button"
-                        className={`segment-mode-chip ${segment.mode === mode.key ? 'active' : ''}`}
+                        className={`segment-mode-chip ${TRANSPORT_TYPE_TO_MODE[segment.transportType] === mode.key ? 'active' : ''}`}
                         onClick={() => onSegmentModeChange(segment.segment_id, mode.key)}
                       >
                         {mode.label}
@@ -152,7 +163,7 @@ function NavigationPanel({
                       type="button"
                       className="segment-nav-icon-btn"
                       onClick={() => onSegmentNav(segment)}
-                      aria-label={`导航 ${segment.from_place_name} 到 ${segment.to_place_name}`}
+                      aria-label={`导航 ${segment.from} 到 ${segment.to}`}
                     >
                       <CompassOutlined />
                       <span>导航</span>
@@ -168,7 +179,7 @@ function NavigationPanel({
             </div>
             <div className="waypoint-content">
               <div className={`waypoint-name ${getWaypointStatus(segments.length)}`}>
-                {lastSegment.to_place_name}
+                {lastSegment.to}
               </div>
             </div>
           </div>

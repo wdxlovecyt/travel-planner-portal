@@ -3,27 +3,6 @@ import { Input, Button, message, List, Tag, Spin } from 'antd'
 import { SearchOutlined, EnvironmentOutlined, CloseOutlined } from '@ant-design/icons'
 import './style.css'
 
-const normalizeGuideRoutes = (routes = []) => {
-  return routes.map((route) => {
-    const places = Array.isArray(route.places) ? route.places : []
-    const segments = Array.isArray(route.segments)
-      ? route.segments.map((segment, index) => ({
-          segment_id: segment.segment_id || `segment_${route.id ?? 'route'}_${index + 1}`,
-          from_place_name: segment.from,
-          to_place_name: segment.to,
-          mode: segment.transportType === '公交' ? 'transit' : segment.transportType,
-          guide: places[index]?.next_segment_advice || places[index]?.advice
-        }))
-      : []
-
-    return {
-      ...route,
-      places,
-      segments
-    }
-  })
-}
-
 function Chat({ onRouteSelect, onFocusChange }) {
   const [searchMessage, setSearchMessage] = useState('给我一份深圳旅游攻略并规划路线')
   const [routes, setRoutes] = useState(null)
@@ -144,12 +123,12 @@ function Chat({ onRouteSelect, onFocusChange }) {
             
             if (data.result) {
               if (Array.isArray(data.result.routes)) {
-                setRoutes(normalizeGuideRoutes(data.result.routes))
+                setRoutes(data.result.routes)
               }
             }
             
             if (Array.isArray(data.routes)) {
-              setRoutes(normalizeGuideRoutes(data.routes))
+              setRoutes(data.routes)
             }
           } catch (e) {
             console.error('解析JSON失败:', e, jsonStr)
@@ -172,10 +151,10 @@ function Chat({ onRouteSelect, onFocusChange }) {
               setAssistantReply((prevReply) => prevReply || data.content)
             }
             if (data.result && Array.isArray(data.result.routes)) {
-              setRoutes(normalizeGuideRoutes(data.result.routes))
+              setRoutes(data.result.routes)
             }
             if (Array.isArray(data.routes)) {
-              setRoutes(normalizeGuideRoutes(data.routes))
+              setRoutes(data.routes)
             }
           } catch (e) {
             console.error('解析最后的数据失败:', e)

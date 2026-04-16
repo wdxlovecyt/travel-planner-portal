@@ -5,10 +5,10 @@ import NavigationPanel from '../NavigationPanel'
 import { getRouteModeState, routeStore, useRouteStore } from '../../stores/routeStore'
 
 const TRANSPORT_MODES = [
-  { key: 'walking', label: '步行', amapMode: 'walk' },
-  { key: 'driving', label: '驾车', amapMode: 'car' },
-  { key: 'riding', label: '骑行', amapMode: 'ride' },
-  { key: 'transit', label: '公交', amapMode: 'bus' }
+  { key: 'walking', label: '步行', transportType: '步行', amapMode: 'walk' },
+  { key: 'driving', label: '驾车', transportType: '驾车', amapMode: 'car' },
+  { key: 'riding', label: '骑行', transportType: '骑行', amapMode: 'ride' },
+  { key: 'transit', label: '公交', transportType: '公交', amapMode: 'bus' }
 ]
 
 const getRouteCity = (route) => route?.city || '深圳'
@@ -35,14 +35,14 @@ const mergeRouteSegments = (route, incomingSegments = []) => {
         ...segment,
         ...incomingSegment,
         segment_id: segmentId,
-        mode: incomingSegment.mode || segment.mode || 'transit'
+        transportType: incomingSegment.transportType || segment.transportType || '公交'
       }
     })
   }
 }
 
 const normalizeSegmentMode = (segment) => {
-  return segment.mode || 'transit'
+  return TRANSPORT_MODES.find((mode) => mode.transportType === segment.transportType)?.key || 'transit'
 }
 
 function NavigationMapScene({ onBack }) {
@@ -68,8 +68,8 @@ function NavigationMapScene({ onBack }) {
       .map((segment, index) => {
         return [
           segment.segment_id || `segment_${index + 1}`,
-          segment.from_place_name,
-          segment.to_place_name
+          segment.from,
+          segment.to
         ].join(':')
       })
       .join('|')
@@ -103,7 +103,7 @@ function NavigationMapScene({ onBack }) {
     }
 
     const firstInvalidSegment = missingCoordinateSegments[0]
-    const invalidSegmentText = `${firstInvalidSegment.from_place_name} -> ${firstInvalidSegment.to_place_name}`
+    const invalidSegmentText = `${firstInvalidSegment.from} -> ${firstInvalidSegment.to}`
 
     message.error(
       missingCoordinateSegments.length > 1
@@ -123,9 +123,9 @@ function NavigationMapScene({ onBack }) {
         city: getRouteCity(route),
         segments: segments.map((segment, index) => ({
           segment_id: segment.segment_id || `segment_${index + 1}`,
-          from_place_name: segment.from_place_name,
-          to_place_name: segment.to_place_name,
-          mode: normalizeSegmentMode(segment)
+          from: segment.from,
+          to: segment.to,
+          transportType: segment.transportType
         }))
       })
     })
@@ -198,8 +198,8 @@ function NavigationMapScene({ onBack }) {
 
   const buildAmapNavUrl = (segment) => {
     const routePlan = segment.route_plan
-    const originName = routePlan?.origin?.name || segment.from_place_name
-    const destinationName = routePlan?.destination?.name || segment.to_place_name
+    const originName = routePlan?.origin?.name || segment.from
+    const destinationName = routePlan?.destination?.name || segment.to
     const originLocation = routePlan?.origin?.location
     const destinationLocation = routePlan?.destination?.location
     const segmentMode = TRANSPORT_MODES.find((mode) => mode.key === normalizeSegmentMode(segment))?.amapMode || 'walk'
@@ -256,7 +256,7 @@ function NavigationMapScene({ onBack }) {
       ...routeToDisplay,
       segments: routeToDisplay.segments.map((segment) => ({
         ...segment,
-        mode: travelMode
+        transportType: TRANSPORT_MODES.find((mode) => mode.key === travelMode)?.transportType || '公交'
       }))
     }
 
@@ -273,7 +273,9 @@ function NavigationMapScene({ onBack }) {
 
     const targetSegment = routeToDisplay.segments.find((segment) => segment.segment_id === segmentId)
 
-    if (!targetSegment || targetSegment.mode === mode) {
+    const nextTransportType = TRANSPORT_MODES.find((item) => item.key === mode)?.transportType || '公交'
+
+    if (!targetSegment || targetSegment.transportType === nextTransportType) {
       return
     }
 
@@ -286,7 +288,7 @@ function NavigationMapScene({ onBack }) {
 
         return {
           ...segment,
-          mode
+          transportType: nextTransportType
         }
       })
     }

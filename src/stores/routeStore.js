@@ -1,6 +1,22 @@
 import { useSyncExternalStore } from 'react'
 
-const DEFAULT_SEGMENT_MODE = 'transit'
+const DEFAULT_SEGMENT_TRANSPORT_TYPE = '公交'
+const TRANSPORT_TYPE_TO_MODE = {
+  步行: 'walking',
+  驾车: 'driving',
+  骑行: 'riding',
+  公交: 'transit',
+  walking: 'walking',
+  driving: 'driving',
+  riding: 'riding',
+  transit: 'transit'
+}
+const MODE_TO_TRANSPORT_TYPE = {
+  walking: '步行',
+  driving: '驾车',
+  riding: '骑行',
+  transit: '公交'
+}
 
 const hasCompleteRoutePlan = (route) => {
   return Boolean(route?.segments?.length) && route.segments.every((segment) => segment.route_plan)
@@ -16,7 +32,7 @@ const createNormalizedRoute = (route) => {
     segments: route.segments.map((segment, index) => ({
       ...segment,
       segment_id: segment.segment_id || `segment_${index + 1}`,
-      mode: segment.mode || DEFAULT_SEGMENT_MODE
+      transportType: segment.transportType || DEFAULT_SEGMENT_TRANSPORT_TYPE
     }))
   }
 }
@@ -97,11 +113,11 @@ export const routeStore = {
       ...prevState,
       selectedRoute: syncRouteSegments(prevState.selectedRoute, (segment) => {
         if (segment.segment_id !== segmentId) return segment
-        return { ...segment, mode }
+        return { ...segment, transportType: MODE_TO_TRANSPORT_TYPE[mode] || mode }
       }),
       currentRoute: syncRouteSegments(prevState.currentRoute, (segment) => {
         if (segment.segment_id !== segmentId) return segment
-        return { ...segment, mode }
+        return { ...segment, transportType: MODE_TO_TRANSPORT_TYPE[mode] || mode }
       })
     }))
   },
@@ -109,20 +125,22 @@ export const routeStore = {
   setAllSegmentModes(mode) {
     setState((prevState) => ({
       ...prevState,
-      selectedRoute: syncRouteSegments(prevState.selectedRoute, (segment) => ({ ...segment, mode })),
-      currentRoute: syncRouteSegments(prevState.currentRoute, (segment) => ({ ...segment, mode }))
+      selectedRoute: syncRouteSegments(prevState.selectedRoute, (segment) => ({ ...segment, transportType: MODE_TO_TRANSPORT_TYPE[mode] || mode })),
+      currentRoute: syncRouteSegments(prevState.currentRoute, (segment) => ({ ...segment, transportType: MODE_TO_TRANSPORT_TYPE[mode] || mode }))
     }))
   }
 }
 
 export const getRouteModeState = (route) => {
-  const modes = route?.segments?.map((segment) => segment.mode).filter(Boolean) || []
+  const modes = route?.segments?.map((segment) => segment.transportType).filter(Boolean) || []
 
   if (modes.length === 0) {
-    return DEFAULT_SEGMENT_MODE
+    return 'transit'
   }
 
-  return new Set(modes).size === 1 ? modes[0] : 'custom'
+  const normalizedModes = modes.map((mode) => TRANSPORT_TYPE_TO_MODE[mode] || 'transit')
+
+  return new Set(normalizedModes).size === 1 ? normalizedModes[0] : 'custom'
 }
 
 export const useRouteStore = (selector = (snapshot) => snapshot) => {

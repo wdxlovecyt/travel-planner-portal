@@ -127,11 +127,11 @@ function GuideExplorer() {
               setStatus(data.message || data.stage)
             }
 
-            if (data.result?.type === 'route_plan_batch' && data.result.routes) {
+            if (Array.isArray(data.result?.routes)) {
               setRoutes(data.result.routes)
             }
 
-            if (data.type === 'route_plan_batch' && data.routes) {
+            if (Array.isArray(data.routes)) {
               setRoutes(data.routes)
             }
           } catch (error) {
@@ -148,11 +148,11 @@ function GuideExplorer() {
             setStatus(data.message || data.stage)
           }
 
-          if (data?.result?.type === 'route_plan_batch' && data.result.routes) {
+          if (Array.isArray(data?.result?.routes)) {
             setRoutes(data.result.routes)
           }
 
-          if (data?.type === 'route_plan_batch' && data.routes) {
+          if (Array.isArray(data?.routes)) {
             setRoutes(data.routes)
           }
         } catch (error) {
@@ -239,10 +239,10 @@ function GuideExplorer() {
                         <div className="guide-route-flow">
                           {route.segments?.map((segment, segmentIndex) => (
                             <React.Fragment key={segment.segment_id || segmentIndex}>
-                              <span className="guide-flow-place">{segment.from_place_name}</span>
+                              <span className="guide-flow-place">{segment.from}</span>
                               <span className="guide-flow-arrow">→</span>
                               {segmentIndex === route.segments.length - 1 && (
-                                <span className="guide-flow-place">{segment.to_place_name}</span>
+                                <span className="guide-flow-place">{segment.to}</span>
                               )}
                             </React.Fragment>
                           ))}
