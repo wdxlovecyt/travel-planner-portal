@@ -16,7 +16,7 @@ const getRouteCity = (route) => route?.city || '深圳'
 const mergeRouteSegments = (route, incomingSegments = []) => {
   const segmentMap = new globalThis.Map(
     incomingSegments.map((segment, index) => [
-      segment.segment_id || `segment_${index + 1}`,
+      segment.id || segment.segment_id || `segment_${index + 1}`,
       segment
     ])
   )
@@ -24,7 +24,7 @@ const mergeRouteSegments = (route, incomingSegments = []) => {
   return {
     ...route,
     segments: route.segments.map((segment, index) => {
-      const segmentId = segment.segment_id || `segment_${index + 1}`
+      const segmentId = segment.id || segment.segment_id || `segment_${index + 1}`
       const incomingSegment = segmentMap.get(segmentId)
 
       if (!incomingSegment) {
@@ -34,6 +34,7 @@ const mergeRouteSegments = (route, incomingSegments = []) => {
       return {
         ...segment,
         ...incomingSegment,
+        id: segmentId,
         segment_id: segmentId,
         transportType: incomingSegment.transportType || segment.transportType || '公交'
       }
@@ -122,7 +123,7 @@ function NavigationMapScene({ onBack }) {
       body: JSON.stringify({
         city: getRouteCity(route),
         segments: segments.map((segment, index) => ({
-          segment_id: segment.segment_id || `segment_${index + 1}`,
+          id: segment.id || segment.segment_id || `segment_${index + 1}`,
           from: segment.from,
           to: segment.to,
           transportType: segment.transportType

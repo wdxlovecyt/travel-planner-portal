@@ -31,6 +31,7 @@ const createNormalizedRoute = (route) => {
     ...route,
     segments: route.segments.map((segment, index) => ({
       ...segment,
+      id: segment.id || segment.segment_id || `segment_${index + 1}`,
       segment_id: segment.segment_id || `segment_${index + 1}`,
       transportType: segment.transportType || DEFAULT_SEGMENT_TRANSPORT_TYPE
     }))
