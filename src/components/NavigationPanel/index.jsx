@@ -3,10 +3,6 @@ import { CompassOutlined, LeftOutlined } from '@ant-design/icons';
 import './style.css';
 
 const TRANSPORT_TYPE_TO_MODE = {
-  步行: 'walking',
-  驾车: 'driving',
-  骑行: 'riding',
-  公交: 'transit',
   walking: 'walking',
   driving: 'driving',
   riding: 'riding',

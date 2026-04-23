@@ -5,10 +5,10 @@ import NavigationPanel from '../NavigationPanel'
 import { getRouteModeState, routeStore, useRouteStore } from '../../stores/routeStore'
 
 const TRANSPORT_MODES = [
-  { key: 'walking', label: '步行', transportType: '步行', amapMode: 'walk' },
-  { key: 'driving', label: '驾车', transportType: '驾车', amapMode: 'car' },
-  { key: 'riding', label: '骑行', transportType: '骑行', amapMode: 'ride' },
-  { key: 'transit', label: '公交', transportType: '公交', amapMode: 'bus' }
+  { key: 'walking', label: '步行', transportType: 'walking', amapMode: 'walk' },
+  { key: 'driving', label: '驾车', transportType: 'driving', amapMode: 'car' },
+  { key: 'riding', label: '骑行', transportType: 'riding', amapMode: 'ride' },
+  { key: 'transit', label: '公交', transportType: 'transit', amapMode: 'bus' }
 ]
 
 const getRouteCity = (route) => route?.city || '深圳'
@@ -36,7 +36,7 @@ const mergeRouteSegments = (route, incomingSegments = []) => {
         ...incomingSegment,
         id: segmentId,
         segment_id: segmentId,
-        transportType: incomingSegment.transportType || segment.transportType || '公交'
+        transportType: incomingSegment.transportType || segment.transportType || 'transit'
       }
     })
   }
@@ -257,7 +257,7 @@ function NavigationMapScene({ onBack }) {
       ...routeToDisplay,
       segments: routeToDisplay.segments.map((segment) => ({
         ...segment,
-        transportType: TRANSPORT_MODES.find((mode) => mode.key === travelMode)?.transportType || '公交'
+        transportType: TRANSPORT_MODES.find((mode) => mode.key === travelMode)?.transportType || 'transit'
       }))
     }
 
@@ -274,7 +274,7 @@ function NavigationMapScene({ onBack }) {
 
     const targetSegment = routeToDisplay.segments.find((segment) => segment.segment_id === segmentId)
 
-    const nextTransportType = TRANSPORT_MODES.find((item) => item.key === mode)?.transportType || '公交'
+    const nextTransportType = TRANSPORT_MODES.find((item) => item.key === mode)?.transportType || 'transit'
 
     if (!targetSegment || targetSegment.transportType === nextTransportType) {
       return

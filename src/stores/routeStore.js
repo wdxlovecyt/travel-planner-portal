@@ -1,21 +1,17 @@
 import { useSyncExternalStore } from 'react'
 
-const DEFAULT_SEGMENT_TRANSPORT_TYPE = '公交'
+const DEFAULT_SEGMENT_TRANSPORT_TYPE = 'transit'
 const TRANSPORT_TYPE_TO_MODE = {
-  步行: 'walking',
-  驾车: 'driving',
-  骑行: 'riding',
-  公交: 'transit',
   walking: 'walking',
   driving: 'driving',
   riding: 'riding',
   transit: 'transit'
 }
 const MODE_TO_TRANSPORT_TYPE = {
-  walking: '步行',
-  driving: '驾车',
-  riding: '骑行',
-  transit: '公交'
+  walking: 'walking',
+  driving: 'driving',
+  riding: 'riding',
+  transit: 'transit'
 }
 
 const hasCompleteRoutePlan = (route) => {
