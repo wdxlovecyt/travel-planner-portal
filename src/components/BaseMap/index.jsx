@@ -76,6 +76,52 @@ const parsePolyline = (polyline) => {
   return polyline.split(';').map((point) => point.split(',').map(Number))
 }
 
+const buildRoutePlaces = (route) => {
+  const routePlaces = Array.isArray(route?.places) ? route.places : []
+  const routeSegments = Array.isArray(route?.segments) ? route.segments : []
+  const placeMap = new Map(routePlaces.map((place) => [place.id, place]))
+  const orderedPlaces = []
+
+  routeSegments.forEach((segment, index) => {
+    if (index === 0 && segment.fromId) {
+      const fromPlace = placeMap.get(segment.fromId)
+      const fromLocation = segment.route_plan?.origin?.location
+
+      if (fromPlace && fromLocation) {
+        orderedPlaces.push({
+          ...fromPlace,
+          location: fromLocation,
+          order: 1
+        })
+      }
+    }
+
+    if (segment.toId) {
+      const toPlace = placeMap.get(segment.toId)
+      const toLocation = segment.route_plan?.destination?.location
+
+      if (toPlace && toLocation) {
+        orderedPlaces.push({
+          ...toPlace,
+          location: toLocation,
+          order: index + 2
+        })
+      }
+    }
+  })
+
+  return orderedPlaces
+}
+
+const createNumberedMarkerContent = (order) => {
+  const marker = document.createElement('div')
+  const label = document.createElement('span')
+  marker.className = 'map-numbered-marker'
+  label.textContent = String(order)
+  marker.appendChild(label)
+  return marker
+}
+
 function BaseMap({
   route = null,
   loading = false,
@@ -147,6 +193,18 @@ function BaseMap({
     mapInstance.current.clearMap()
     const allMarkers = []
     const allPolylines = []
+    const routePlaces = buildRoutePlaces(route)
+
+    routePlaces.forEach((place) => {
+      const marker = new window.AMap.Marker({
+        position: place.location.split(',').map(Number),
+        title: place.name,
+        content: createNumberedMarkerContent(place.order),
+        offset: new window.AMap.Pixel(-13, -28)
+      })
+      marker.setMap(mapInstance.current)
+      allMarkers.push(marker)
+    })
 
     route.segments.forEach((segment) => {
       const segmentMode = normalizeSegmentMode(segment)
@@ -156,33 +214,7 @@ function BaseMap({
         return
       }
 
-      const { origin, destination, steps, legs } = routePlan
-
-      if (origin?.location) {
-        const originMarker = new window.AMap.Marker({
-          position: origin.location.split(',').map(Number),
-          title: origin.name,
-          icon: new window.AMap.Icon({
-            size: new window.AMap.Size(32, 32),
-            image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png'
-          })
-        })
-        originMarker.setMap(mapInstance.current)
-        allMarkers.push(originMarker)
-      }
-
-      if (destination?.location) {
-        const destinationMarker = new window.AMap.Marker({
-          position: destination.location.split(',').map(Number),
-          title: destination.name,
-          icon: new window.AMap.Icon({
-            size: new window.AMap.Size(32, 32),
-            image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png'
-          })
-        })
-        destinationMarker.setMap(mapInstance.current)
-        allMarkers.push(destinationMarker)
-      }
+      const { steps, legs } = routePlan
 
       if (legs?.length) {
         legs.forEach((leg) => {

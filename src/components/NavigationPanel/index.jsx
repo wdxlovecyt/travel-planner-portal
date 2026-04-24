@@ -65,6 +65,16 @@ function NavigationPanel({
   const { segments } = currentRoute;
   const lastSegment = segments[segments.length - 1];
   const editableTransportModes = transportModes.filter((mode) => mode.key !== 'custom');
+  const placeNumberMap = new Map(
+    (currentRoute.places || []).map((place, index) => [place.id, index + 1])
+  );
+  const placeAdviceMap = new Map(
+    (currentRoute.places || []).map((place) => [place.id, place.advice || ''])
+  );
+  const getPlaceAdvice = (placeId) => {
+    return placeAdviceMap.get(placeId) || '';
+  };
+  const getWaypointNumber = (placeId, fallbackNumber) => placeNumberMap.get(placeId) || fallbackNumber;
 
   return (
     <>
@@ -118,7 +128,13 @@ function NavigationPanel({
                   <div className="waypoint-line"></div>
                 </div>
                 <div className="waypoint-content">
-                  <div className={`waypoint-name ${getWaypointStatus(index)}`}>{segment.from}</div>
+                  <div className={`waypoint-name ${getWaypointStatus(index)}`}>
+                    <span className="waypoint-number">{getWaypointNumber(segment.fromId, index + 1)}</span>
+                    <span>{segment.from}</span>
+                  </div>
+                  {getPlaceAdvice(segment.fromId) && (
+                    <div className="waypoint-advice">{getPlaceAdvice(segment.fromId)}</div>
+                  )}
                 </div>
               </div>
 
@@ -175,8 +191,12 @@ function NavigationPanel({
             </div>
             <div className="waypoint-content">
               <div className={`waypoint-name ${getWaypointStatus(segments.length)}`}>
-                {lastSegment.to}
+                <span className="waypoint-number">{getWaypointNumber(lastSegment.toId, segments.length + 1)}</span>
+                <span>{lastSegment.to}</span>
               </div>
+              {getPlaceAdvice(lastSegment.toId) && (
+                <div className="waypoint-advice">{getPlaceAdvice(lastSegment.toId)}</div>
+              )}
             </div>
           </div>
         </div>

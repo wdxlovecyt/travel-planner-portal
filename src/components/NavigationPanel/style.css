@@ -227,11 +227,37 @@
   color: #262626;
   margin-bottom: 6px;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
 }
 
 .waypoint-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   line-height: 1.4;
+}
+
+.waypoint-number {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #1677ff;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.waypoint-advice {
+  margin-top: 4px;
+  color: #7b8794;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .waypoint-name.missing {
